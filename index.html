@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SPORTIME 테니스 예약</title>
+<title>SPORTIME | 테니스 예약 캘린더</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#111}
 .app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh}
-.topbar{background:#185fa5;color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
-.topbar h1{font-size:17px;font-weight:600;letter-spacing:-0.3px}
+.topbar{background:transparent;color:#111;padding:16px 20px;display:flex;align-items:center;justify-content:flex-end;border-bottom:1px solid #eee;position:relative}
+.topbar h1{font-size:17px;font-weight:800;letter-spacing:-0.3px;color:#111;position:absolute;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;max-width:calc(100% - 140px);overflow:hidden;text-overflow:ellipsis}
 .topbar-right{display:flex;gap:8px}
-.icon-btn{background:rgba(255,255,255,0.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
-.icon-btn:hover{background:rgba(255,255,255,0.3)}
+.icon-btn{background:#f5f5f5;border:1px solid #ddd;color:#111;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.icon-btn:hover{background:#ededed}
 .month-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #eee}
 .month-nav button{background:none;border:1px solid #ddd;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#333}
 .month-label{font-size:16px;font-weight:600}
@@ -87,6 +87,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .add-row{display:flex;gap:8px;margin-bottom:16px}
 .add-row input{flex:1;border:1px solid #ddd;border-radius:10px;padding:10px 14px;font-size:14px}
 .add-row button{border:1px solid #ddd;border-radius:10px;padding:10px 16px;background:#fff;cursor:pointer;font-size:14px}
+.emoji-inp{flex:0 0 72px;text-align:center;padding:10px 10px}
+.emoji-btn{border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;padding:8px 10px;line-height:1}
+.emoji-inp[readonly]{background:#fafafa;cursor:pointer}
+.emoji-picker{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:92%;max-width:420px;background:#fff;border:1px solid #eee;border-radius:16px;z-index:200;display:none;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden}
+.emoji-picker.on{display:block}
+.emoji-picker-h{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eee}
+.emoji-picker-h strong{font-size:14px}
+.emoji-picker-close{background:none;border:none;font-size:22px;cursor:pointer;color:#999;line-height:1}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;padding:12px;max-height:42vh;overflow:auto}
+.emoji-item{border:1px solid #eee;background:#fff;border-radius:12px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+.emoji-item:hover{background:#f5f5f5}
 .del-btn{background:none;border:none;color:#e24b4a;font-size:20px;cursor:pointer;line-height:1}
 .loading{text-align:center;padding:40px;color:#aaa;font-size:14px}
 </style>
@@ -95,7 +106,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div class="app" id="app">
   <div class="topbar">
-    <h1>🎾 SPORTIME 테니스</h1>
+    <h1>SPORTIME 테니스 예약</h1>
     <div class="topbar-right">
       <button class="icon-btn" onclick="openManage()">멤버 관리</button>
     </div>
@@ -123,6 +134,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="back-btn" onclick="closeManage()">&#8592; 달력으로</button>
     <h2 style="font-size:17px;font-weight:700;margin-bottom:16px">멤버 관리</h2>
     <div class="add-row">
+      <input type="text" id="new-emoji" class="emoji-inp" placeholder="😀" readonly onclick="window._pickEmojiForNew()" />
       <input type="text" id="new-name" placeholder="이름 입력" />
       <button onclick="addMember()">추가</button>
     </div>
@@ -148,6 +160,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<div class="overlay" id="emoji-overlay" onclick="window._closeEmojiPicker()"></div>
+<div class="emoji-picker" id="emoji-picker" role="dialog" aria-modal="true" aria-label="이모티콘 선택">
+  <div class="emoji-picker-h">
+    <strong>이모티콘 선택</strong>
+    <button class="emoji-picker-close" onclick="window._closeEmojiPicker()">&#215;</button>
+  </div>
+  <div class="emoji-grid" id="emoji-grid"></div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -167,8 +188,18 @@ const db = getDatabase(fbApp);
 
 const COLORS = ['#378add','#1d9e75','#d85a30','#9f6bb5','#ba7517','#d4537e','#639922','#5dcaa5'];
 const TIMES = ['18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00'];
+const EMOJIS = [
+  '🎾','🏸','🏓','🏃‍♂️','🏃‍♀️','💪','🔥','⭐️',
+  '😀','😄','😁','😆','😊','🙂','😎','🤩',
+  '🍀','🌿','🌸','🌼','🍋','🍑','🍓','🍇',
+  '☕️','🍺','🥤','🍜','🍣','🍕','🍗','🥗',
+  '🐶','🐱','🐻','🐼','🐰','🦊','🐯','🦁'
+];
 const DEFAULT_MEMBERS = [
-  {id:1,name:'김민준'},{id:2,name:'이서연'},{id:3,name:'박지호'},{id:4,name:'최유나'}
+  {id:1,name:'김민준',emoji:'😀'},
+  {id:2,name:'이서연',emoji:'😄'},
+  {id:3,name:'박지호',emoji:'🎾'},
+  {id:4,name:'최유나',emoji:'😊'}
 ];
 
 let members = [];
@@ -181,6 +212,10 @@ function minToTime(m){return`${String(Math.floor(m/60)).padStart(2,'0')}:${Strin
 function today(){const d=new Date();return{y:d.getFullYear(),m:d.getMonth(),d:d.getDate()}}
 function dateKey(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 function memberColor(id){return COLORS[(id-1)%COLORS.length]}
+function avatarText(m){
+  const e=(m.emoji||'').trim();
+  return e?e:(m.name?m.name[0]:'?');
+}
 
 function getMeetTime(key){
   const ev=events[key]||{};
@@ -222,6 +257,7 @@ function init(){
   const t=today();curYear=t.y;curMonth=t.m;
   renderCal();
   initData();
+  buildEmojiPicker();
 }
 
 function changeMonth(dir){
@@ -307,7 +343,7 @@ function renderPanel(){
     const mev=ev[m.id]||{attend:false,arrive:'18:00'};
     const row=document.createElement('div');row.className='member-row';
     row.innerHTML=`
-      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)}">${m.name[0]}</div>
+      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)}">${avatarText(m)}</div>
       <div class="m-info">
         <div class="m-name">${m.name}</div>
         ${mev.attend
@@ -397,13 +433,53 @@ function renderMemberList(){
   members.forEach(m=>{
     const row=document.createElement('div');row.className='member-row';
     row.innerHTML=`
-      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)}">${m.name[0]}</div>
+      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)}">${avatarText(m)}</div>
       <div class="m-info"><div class="m-name">${m.name}</div></div>
+      <button class="emoji-btn" title="이모티콘 변경" onclick="window._pickEmojiForMember(${m.id})">${(m.emoji||'😊').trim()||'😊'}</button>
       <button class="del-btn" onclick="window._deleteMember(${m.id})">&#215;</button>
     `;
     list.appendChild(row);
   });
 }
+
+let emojiPickTarget = null;
+function buildEmojiPicker(){
+  const grid=document.getElementById('emoji-grid');
+  if(!grid)return;
+  grid.innerHTML=EMOJIS.map(e=>`<button class="emoji-item" onclick="window._chooseEmoji('${e.replaceAll("'","\\'")}')">${e}</button>`).join('');
+}
+function openEmojiPicker(target){
+  emojiPickTarget=target;
+  document.getElementById('emoji-overlay').classList.add('on');
+  document.getElementById('emoji-picker').classList.add('on');
+}
+window._closeEmojiPicker = function(){
+  document.getElementById('emoji-overlay').classList.remove('on');
+  document.getElementById('emoji-picker').classList.remove('on');
+  emojiPickTarget=null;
+};
+window._pickEmojiForNew = function(){
+  openEmojiPicker({type:'new'});
+};
+window._pickEmojiForMember = function(id){
+  openEmojiPicker({type:'member',id});
+};
+window._chooseEmoji = async function(e){
+  const emoji=(e||'').trim();
+  if(!emoji){window._closeEmojiPicker();return;}
+  if(!emojiPickTarget){window._closeEmojiPicker();return;}
+  if(emojiPickTarget.type==='new'){
+    const inp=document.getElementById('new-emoji');
+    if(inp)inp.value=emoji;
+    window._closeEmojiPicker();
+    return;
+  }
+  if(emojiPickTarget.type==='member'){
+    const id=emojiPickTarget.id;
+    window._closeEmojiPicker();
+    await set(ref(db,`members/${id}/emoji`),emoji);
+  }
+};
 
 window._deleteMember = async function(id){
   if(members.length<=1){alert('최소 1명은 있어야 해요.');return;}
@@ -415,14 +491,17 @@ window._deleteMember = async function(id){
 
 window.addMember = async function(){
   const inp=document.getElementById('new-name');
+  const eInp=document.getElementById('new-emoji');
   const name=inp.value.trim();
+  const emoji=(eInp?.value||'').trim();
   if(!name)return;
   const id=nextId++;
   const obj={};
   members.forEach(m=>{obj[m.id]=m;});
-  obj[id]={id,name};
+  obj[id]={id,name,...(emoji?{emoji}:{})};
   await set(ref(db,'members'),obj);
   inp.value='';
+  if(eInp)eInp.value='';
 };
 
 document.getElementById('new-name').addEventListener('keydown',e=>{if(e.key==='Enter')window.addMember();});
