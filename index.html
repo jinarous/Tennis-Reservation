@@ -45,6 +45,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .status-emoji{width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;background:#f5f5f5}
 .status-name{font-size:12px;font-weight:600;color:#111}
 .status-empty{font-size:12px;color:#888}
+.status-tl{margin-top:12px}
+.status-tl .sec-title{margin-bottom:8px}
+.status-tl .tl-name{width:52px}
+.status-tl .tl-time{width:38px}
+.status-tl .tl-wrap{height:14px}
+.status-tl .tl-bar{height:14px}
 
 /* 패널 */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:50}
@@ -150,6 +156,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="status-right" id="status-right"></div>
       </div>
       <div id="status-body"></div>
+      <div class="status-tl" id="status-timeline"></div>
     </div>
     <div id="loading" class="loading">데이터 불러오는 중...</div>
   </div>
@@ -335,7 +342,8 @@ function renderStatus(){
   const sub=document.getElementById('status-sub');
   const right=document.getElementById('status-right');
   const body=document.getElementById('status-body');
-  if(!title||!sub||!right||!body)return;
+  const tl=document.getElementById('status-timeline');
+  if(!title||!sub||!right||!body||!tl)return;
 
   title.textContent=`오늘(${t.m+1}월 ${t.d}일) 출석 신청 현황`;
   sub.textContent='달력에서 날짜를 눌러 상세를 확인할 수 있어요.';
@@ -347,11 +355,37 @@ function renderStatus(){
 
   if(attending.length===0){
     body.innerHTML=`<div class="status-empty">아직 출석 신청한 멤버가 없어요.</div>`;
+    tl.innerHTML='';
     return;
   }
   body.innerHTML=`<div class="status-list">
     ${attending.map(m=>`<div class="status-pill"><div class="status-emoji">${avatarText(m)}</div><div class="status-name">${m.name}</div></div>`).join('')}
   </div>`;
+
+  // timeline (오늘)
+  const minAll=timeToMin(TIMES[0]);
+  const maxAll=timeToMin(TIMES[TIMES.length-1]);
+  const range=maxAll-minAll;
+  const meetMin=meetTime?timeToMin(meetTime):null;
+  let html=`<div class="sec-title">도착 타임라인</div>`;
+  attending.forEach(m=>{
+    const arrMin=timeToMin(ev[m.id].arrive||TIMES[0]);
+    const lp=((arrMin-minAll)/range*100).toFixed(1);
+    const wp=((maxAll-arrMin)/range*100).toFixed(1);
+    const mp=meetMin!==null?((meetMin-minAll)/range*100).toFixed(1):null;
+    html+=`<div class="tl-row">
+      <div class="tl-name" style="color:${memberColor(m.id)}">${m.name}</div>
+      <div class="tl-wrap">
+        <div class="tl-bar" style="left:${lp}%;width:${Math.max(parseFloat(wp),4)}%;background:${memberColor(m.id)}33;border:1.5px solid ${memberColor(m.id)}"></div>
+        ${mp!==null?`<div class="tl-line" style="left:${mp}%"></div>`:''}
+      </div>
+      <div class="tl-time">${ev[m.id].arrive}</div>
+    </div>`;
+  });
+  if(meetMin!==null){
+    html+=`<div class="tl-meet-label">▲ ${meetTime}</div>`;
+  }
+  tl.innerHTML=html;
 }
 
 function openPanel(y,m,d){
