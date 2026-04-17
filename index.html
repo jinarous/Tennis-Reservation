@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPOTIME 테니스 예약</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#111}
+.app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh}
+.topbar{background:#185fa5;color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:17px;font-weight:600;letter-spacing:-0.3px}
+.topbar-right{display:flex;gap:8px}
+.icon-btn{background:rgba(255,255,255,0.2);border:none;color:white;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.icon-btn:hover{background:rgba(255,255,255,0.3)}
+.month-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #eee}
+.month-nav button{background:none;border:1px solid #ddd;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#333}
+.month-label{font-size:16px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:12px}
+.day-hdr{text-align:center;font-size:11px;font-weight:600;color:#888;padding:4px 0}
+.day-hdr.sun{color:#e24b4a}
+.day-cell{border:1px solid #eee;border-radius:10px;min-height:72px;padding:6px;cursor:pointer;background:#fff;transition:all 0.1s}
+.day-cell:hover{border-color:#378add;background:#f0f7ff}
+.day-cell.empty{background:transparent;border-color:transparent;cursor:default}
+.day-cell.today{border-color:#378add;border-width:2px}
+.day-cell.has-event{background:#f8fbff}
+.day-num{font-size:12px;color:#888;margin-bottom:3px}
+.day-num.sun{color:#e24b4a}
+.day-num.today-n{font-weight:700;color:#185fa5}
+.dots{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px}
+.dot{width:14px;height:14px;border-radius:50%;font-size:7px;color:white;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ready-badge{font-size:8px;background:#639922;color:white;border-radius:10px;padding:1px 5px;display:inline-block}
+.meet-t{font-size:9px;font-weight:700;color:#185fa5;margin-top:1px}
+
+/* 패널 */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:50}
+.overlay.on{display:block}
+.panel{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-radius:20px 20px 0 0;z-index:100;display:none;flex-direction:column;max-height:90vh;overflow:hidden}
+.panel.on{display:flex}
+.panel-handle{width:36px;height:4px;background:#ddd;border-radius:2px;margin:12px auto 0}
+.panel-head{padding:12px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
+.panel-head h2{font-size:16px;font-weight:600}
+.panel-close{background:none;border:none;font-size:22px;cursor:pointer;color:#999;line-height:1}
+.panel-body{overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+
+.meet-card{border-radius:14px;padding:14px 16px}
+.meet-card.ready{background:#eaf3de;border:1px solid #c0dd97}
+.meet-card.not-ready{background:#f5f5f5;border:1px solid #e8e8e8}
+.meet-label{font-size:11px;font-weight:600;color:#3b6d11;margin-bottom:2px}
+.meet-time-big{font-size:28px;font-weight:700;color:#27500a;letter-spacing:-1px}
+.meet-sub{font-size:12px;color:#3b6d11;margin-top:2px}
+.not-ready-txt{font-size:13px;color:#666}
+.not-ready-txt strong{color:#111}
+
+.sec-title{font-size:12px;font-weight:600;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+.member-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0}
+.member-row:last-child{border-bottom:none}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.m-info{flex:1}
+.m-name{font-size:14px;font-weight:600;color:#111}
+.arrive-sel{font-size:12px;border:1px solid #ddd;border-radius:8px;padding:3px 7px;background:#fff;cursor:pointer;margin-top:3px}
+.m-absent{font-size:12px;color:#aaa;margin-top:2px}
+.toggle{width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0}
+.toggle::after{content:'';position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+.toggle.off{background:#ddd}
+.toggle.off::after{left:3px}
+.toggle.on{background:#1d9e75}
+.toggle.on::after{left:23px}
+
+/* 타임라인 */
+.tl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.tl-name{font-size:11px;font-weight:600;width:46px;text-align:right;flex-shrink:0}
+.tl-wrap{flex:1;height:16px;background:#f0f0f0;border-radius:8px;position:relative;overflow:visible}
+.tl-bar{height:16px;border-radius:8px;position:absolute}
+.tl-line{position:absolute;top:-5px;bottom:-5px;width:2px;background:#e24b4a;border-radius:1px;z-index:2}
+.tl-time{font-size:10px;color:#999;width:34px;flex-shrink:0;padding-left:5px}
+.tl-meet-label{font-size:10px;color:#e24b4a;font-weight:600;margin-top:2px}
+
+.reserve-btn{background:#185fa5;color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;width:100%;margin-top:4px}
+.reserve-btn:disabled{background:#e0e0e0;color:#aaa;cursor:default}
+.reserve-btn:not(:disabled):active{background:#0c447c}
+
+/* 멤버 관리 페이지 */
+.page{display:none;padding:20px}
+.page.on{display:block}
+.back-btn{background:none;border:none;color:#185fa5;font-size:14px;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:4px}
+.add-row{display:flex;gap:8px;margin-bottom:16px}
+.add-row input{flex:1;border:1px solid #ddd;border-radius:10px;padding:10px 14px;font-size:14px}
+.add-row button{border:1px solid #ddd;border-radius:10px;padding:10px 16px;background:#fff;cursor:pointer;font-size:14px}
+.del-btn{background:none;border:none;color:#e24b4a;font-size:20px;cursor:pointer;line-height:1}
+.loading{text-align:center;padding:40px;color:#aaa;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="topbar">
+    <h1>🎾 SPOTIME 테니스</h1>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="openManage()">멤버 관리</button>
+    </div>
+  </div>
+
+  <div id="cal-view">
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <span class="month-label" id="month-label"></span>
+      <button onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid">
+      <div class="day-hdr sun">일</div>
+      <div class="day-hdr">월</div>
+      <div class="day-hdr">화</div>
+      <div class="day-hdr">수</div>
+      <div class="day-hdr">목</div>
+      <div class="day-hdr">금</div>
+      <div class="day-hdr">토</div>
+    </div>
+    <div id="loading" class="loading">데이터 불러오는 중...</div>
+  </div>
+
+  <div class="page" id="manage-page">
+    <button class="back-btn" onclick="closeManage()">&#8592; 달력으로</button>
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:16px">멤버 관리</h2>
+    <div class="add-row">
+      <input type="text" id="new-name" placeholder="이름 입력" />
+      <button onclick="addMember()">추가</button>
+    </div>
+    <div id="member-list"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-handle"></div>
+  <div class="panel-head">
+    <h2 id="panel-date"></h2>
+    <button class="panel-close" onclick="closePanel()">&#215;</button>
+  </div>
+  <div class="panel-body">
+    <div id="meet-box"></div>
+    <div id="panel-members-wrap">
+      <div class="sec-title">출석 체크</div>
+      <div id="panel-members"></div>
+    </div>
+    <div id="timeline-wrap"></div>
+    <button class="reserve-btn" id="reserve-btn" onclick="doReserve()"></button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAxmMAiv5V4YKIactoy_rgzlzqGlLsSGIs",
+  authDomain: "spotime-tennis.firebaseapp.com",
+  databaseURL: "https://spotime-tennis-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "spotime-tennis",
+  storageBucket: "spotime-tennis.firebasestorage.app",
+  messagingSenderId: "845309880522",
+  appId: "1:845309880522:web:3e6576b13bf31535826c33"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+
+const COLORS = ['#378add','#1d9e75','#d85a30','#9f6bb5','#ba7517','#d4537e','#639922','#5dcaa5'];
+const TIMES = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00'];
+const DEFAULT_MEMBERS = [
+  {id:1,name:'김민준'},{id:2,name:'이서연'},{id:3,name:'박지호'},{id:4,name:'최유나'}
+];
+
+let members = [];
+let events = {};
+let nextId = 10;
+let curYear, curMonth, selDate;
+
+function timeToMin(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+function minToTime(m){return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
+function today(){const d=new Date();return{y:d.getFullYear(),m:d.getMonth(),d:d.getDate()}}
+function dateKey(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+function memberColor(id){return COLORS[(id-1)%COLORS.length]}
+
+function getMeetTime(key){
+  const ev=events[key]||{};
+  const attending=members.filter(m=>ev[m.id]&&ev[m.id].attend);
+  if(attending.length<4)return null;
+  const maxMin=Math.max(...attending.map(m=>timeToMin(ev[m.id].arrive||'18:00')));
+  return minToTime(maxMin);
+}
+
+// Firebase 초기화
+async function initData(){
+  const mSnap = await get(ref(db,'members'));
+  if(!mSnap.exists()){
+    const obj={};
+    DEFAULT_MEMBERS.forEach(m=>{obj[m.id]=m;});
+    await set(ref(db,'members'),obj);
+  }
+
+  // 멤버 실시간 구독
+  onValue(ref(db,'members'),(snap)=>{
+    const data=snap.val()||{};
+    members=Object.values(data);
+    nextId=members.length>0?Math.max(...members.map(m=>m.id))+1:1;
+    renderMemberList();
+    renderCal();
+  });
+
+  // 이벤트 실시간 구독
+  onValue(ref(db,'events'),(snap)=>{
+    events=snap.val()||{};
+    renderCal();
+    if(selDate)renderPanel();
+  });
+
+  document.getElementById('loading').style.display='none';
+}
+
+function init(){
+  const t=today();curYear=t.y;curMonth=t.m;
+  renderCal();
+  initData();
+}
+
+function changeMonth(dir){
+  curMonth+=dir;
+  if(curMonth<0){curMonth=11;curYear--;}
+  if(curMonth>11){curMonth=0;curYear++;}
+  renderCal();
+}
+
+function renderCal(){
+  const label=document.getElementById('month-label');
+  label.textContent=`${curYear}년 ${curMonth+1}월`;
+  const grid=document.getElementById('cal-grid');
+  grid.querySelectorAll('.day-cell').forEach(c=>c.remove());
+  const first=new Date(curYear,curMonth,1).getDay();
+  const days=new Date(curYear,curMonth+1,0).getDate();
+  const t=today();
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='day-cell empty';grid.appendChild(e);}
+  for(let d=1;d<=days;d++){
+    const key=dateKey(curYear,curMonth,d);
+    const ev=events[key]||{};
+    const attending=members.filter(m=>ev[m.id]&&ev[m.id].attend);
+    const isToday=(curYear===t.y&&curMonth===t.m&&d===t.d);
+    const dow=new Date(curYear,curMonth,d).getDay();
+    const meetTime=getMeetTime(key);
+    const cell=document.createElement('div');
+    cell.className='day-cell'+(isToday?' today':'')+(attending.length>0?' has-event':'');
+    cell.onclick=()=>openPanel(curYear,curMonth,d);
+    let html=`<div class="day-num${dow===0?' sun':''}${isToday?' today-n':''}">${d}</div>`;
+    html+=`<div class="dots">`;
+    attending.slice(0,4).forEach(m=>{html+=`<div class="dot" style="background:${memberColor(m.id)}">${m.name[0]}</div>`;});
+    html+=`</div>`;
+    if(meetTime){
+      html+=`<div class="ready-badge">예약가능</div>`;
+      html+=`<div class="meet-t">${meetTime}~</div>`;
+    }
+    cell.innerHTML=html;
+    grid.appendChild(cell);
+  }
+}
+
+function openPanel(y,m,d){
+  selDate=dateKey(y,m,d);
+  document.getElementById('panel-date').textContent=`${m+1}월 ${d}일`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('panel').classList.add('on');
+  renderPanel();
+}
+function closePanel(){
+  document.getElementById('overlay').classList.remove('on');
+  document.getElementById('panel').classList.remove('on');
+}
+
+function renderPanel(){
+  const ev=events[selDate]||{};
+  const attending=members.filter(m=>ev[m.id]&&ev[m.id].attend);
+  const count=attending.length;
+  const meetTime=getMeetTime(selDate);
+
+  // meet card
+  const mb=document.getElementById('meet-box');
+  if(meetTime){
+    mb.innerHTML=`<div class="meet-card ready">
+      <div class="meet-label">전원 합류 시간</div>
+      <div class="meet-time-big">${meetTime}</div>
+      <div class="meet-sub">이 시간부터 코트 예약 가능해요 🎾</div>
+    </div>`;
+  } else {
+    mb.innerHTML=`<div class="meet-card not-ready">
+      <div class="not-ready-txt"><strong>${count}명</strong> 출석 예정 — 예약까지 <strong>${4-count}명</strong> 더 필요해요</div>
+    </div>`;
+  }
+
+  // reserve btn
+  const rb=document.getElementById('reserve-btn');
+  rb.disabled=!meetTime;
+  rb.textContent=meetTime?`${meetTime}부터 예약 가능 ✓`:`아직 ${count}명 (4명 필요)`;
+
+  // members
+  const pm=document.getElementById('panel-members');
+  pm.innerHTML='';
+  members.forEach(m=>{
+    const mev=ev[m.id]||{attend:false,arrive:'18:00'};
+    const row=document.createElement('div');row.className='member-row';
+    row.innerHTML=`
+      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)}">${m.name[0]}</div>
+      <div class="m-info">
+        <div class="m-name">${m.name}</div>
+        ${mev.attend
+          ?`<select class="arrive-sel" onchange="window._setArrive(${m.id},this.value)">
+              ${TIMES.map(t=>`<option${t===mev.arrive?' selected':''}>${t}</option>`).join('')}
+            </select>`
+          :`<div class="m-absent">미참석</div>`}
+      </div>
+      <button class="toggle ${mev.attend?'on':'off'}" onclick="window._toggleAttend(${m.id})"></button>
+    `;
+    pm.appendChild(row);
+  });
+
+  // timeline
+  const tw=document.getElementById('timeline-wrap');
+  if(attending.length>0){
+    const minAll=timeToMin(TIMES[0]);
+    const maxAll=timeToMin(TIMES[TIMES.length-1]);
+    const range=maxAll-minAll;
+    const meetMin=meetTime?timeToMin(meetTime):null;
+    let html=`<div><div class="sec-title" style="margin-bottom:8px">도착 타임라인</div>`;
+    attending.forEach(m=>{
+      const arrMin=timeToMin(ev[m.id].arrive||'18:00');
+      const lp=((arrMin-minAll)/range*100).toFixed(1);
+      const wp=((maxAll-arrMin)/range*100).toFixed(1);
+      const mp=meetMin!==null?((meetMin-minAll)/range*100).toFixed(1):null;
+      html+=`<div class="tl-row">
+        <div class="tl-name" style="color:${memberColor(m.id)}">${m.name}</div>
+        <div class="tl-wrap">
+          <div class="tl-bar" style="left:${lp}%;width:${Math.max(parseFloat(wp),4)}%;background:${memberColor(m.id)}33;border:1.5px solid ${memberColor(m.id)}"></div>
+          ${mp!==null?`<div class="tl-line" style="left:${mp}%"></div>`:''}
+        </div>
+        <div class="tl-time">${ev[m.id].arrive}</div>
+      </div>`;
+    });
+    if(meetMin!==null){
+      const mp=((meetMin-minAll)/range*100).toFixed(1);
+      html+=`<div class="tl-meet-label" style="padding-left:${54+parseFloat(mp)*0.01*(document.getElementById('timeline-wrap').offsetWidth-88)}px">▲ ${meetTime}</div>`;
+    }
+    html+=`</div>`;
+    tw.innerHTML=html;
+  } else {
+    tw.innerHTML='';
+  }
+}
+
+window._toggleAttend = async function(mid){
+  const ev=events[selDate]||{};
+  const cur=ev[mid]||{attend:false,arrive:'18:00'};
+  const newVal={...cur,attend:!cur.attend};
+  await set(ref(db,`events/${selDate}/${mid}`),newVal);
+};
+
+window._setArrive = async function(mid,val){
+  const ev=events[selDate]||{};
+  const cur=ev[mid]||{attend:true,arrive:'18:00'};
+  await set(ref(db,`events/${selDate}/${mid}`),{...cur,arrive:val});
+};
+
+function doReserve(){
+  const ev=events[selDate]||{};
+  const attending=members.filter(m=>ev[m.id]&&ev[m.id].attend);
+  const meetTime=getMeetTime(selDate);
+  const names=attending.map(m=>m.name).join(', ');
+  alert(`✅ 예약 명단\n${names}\n\n⏰ 전원 합류: ${meetTime}\n이 시간에 코트 예약 명단에 등록하세요!`);
+}
+
+function openManage(){
+  document.getElementById('cal-view').style.display='none';
+  document.getElementById('manage-page').classList.add('on');
+  renderMemberList();
+}
+function closeManage(){
+  document.getElementById('cal-view').style.display='block';
+  document.getElementById('manage-page').classList.remove('on');
+}
+window.openManage=openManage;
+window.closeManage=closeManage;
+window.changeMonth=changeMonth;
+window.closePanel=closePanel;
+window.doReserve=doReserve;
+
+function renderMemberList(){
+  const list=document.getElementById('member-list');
+  if(!list)return;
+  list.innerHTML='';
+  members.forEach(m=>{
+    const row=document.createElement('div');row.className='member-row';
+    row.innerHTML=`
+      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)}">${m.name[0]}</div>
+      <div class="m-info"><div class="m-name">${m.name}</div></div>
+      <button class="del-btn" onclick="window._deleteMember(${m.id})">&#215;</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+window._deleteMember = async function(id){
+  if(members.length<=1){alert('최소 1명은 있어야 해요.');return;}
+  if(!confirm('정말 삭제할까요?'))return;
+  const obj={};
+  members.filter(m=>m.id!==id).forEach(m=>{obj[m.id]=m;});
+  await set(ref(db,'members'),obj);
+};
+
+window.addMember = async function(){
+  const inp=document.getElementById('new-name');
+  const name=inp.value.trim();
+  if(!name)return;
+  const id=nextId++;
+  const obj={};
+  members.forEach(m=>{obj[m.id]=m;});
+  obj[id]={id,name};
+  await set(ref(db,'members'),obj);
+  inp.value='';
+};
+
+document.getElementById('new-name').addEventListener('keydown',e=>{if(e.key==='Enter')window.addMember();});
+
+init();
+</script>
+</body>
+</html>
