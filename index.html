@@ -166,7 +166,7 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 
 const COLORS = ['#378add','#1d9e75','#d85a30','#9f6bb5','#ba7517','#d4537e','#639922','#5dcaa5'];
-const TIMES = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00'];
+const TIMES = ['18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00'];
 const DEFAULT_MEMBERS = [
   {id:1,name:'김민준'},{id:2,name:'이서연'},{id:3,name:'박지호'},{id:4,name:'최유나'}
 ];
@@ -356,14 +356,14 @@ function renderPanel(){
 
 window._toggleAttend = async function(mid){
   const ev=events[selDate]||{};
-  const cur=ev[mid]||{attend:false,arrive:'18:00'};
+  const cur=ev[mid]||{attend:false,arrive:'19:00'};
   const newVal={...cur,attend:!cur.attend};
   await set(ref(db,`events/${selDate}/${mid}`),newVal);
 };
 
 window._setArrive = async function(mid,val){
   const ev=events[selDate]||{};
-  const cur=ev[mid]||{attend:true,arrive:'18:00'};
+  const cur=ev[mid]||{attend:true,arrive:'19:00'};
   await set(ref(db,`events/${selDate}/${mid}`),{...cur,arrive:val});
 };
 
