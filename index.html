@@ -99,12 +99,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toggle.on::after{left:23px}
 
 /* 타임라인 */
-.tl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.tl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:nowrap}
 .tl-name{font-size:11px;font-weight:600;width:46px;text-align:right;flex-shrink:0}
 .tl-wrap{flex:1;height:16px;background:#f0f0f0;border-radius:8px;position:relative;overflow:visible}
 .tl-bar{height:16px;border-radius:8px;position:absolute}
 .tl-line{position:absolute;top:-5px;bottom:-5px;width:2px;background:#e24b4a;border-radius:1px;z-index:2}
-.tl-time{font-size:10px;color:#999;width:34px;flex-shrink:0;padding-left:5px}
+.tl-time{font-size:10px;color:#999;width:34px;flex-shrink:0;padding-left:5px;white-space:nowrap;text-align:right}
 .tl-meet-label{font-size:10px;color:#e24b4a;font-weight:600;margin-top:2px}
 
 .reserve-btn{background:#185fa5;color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;width:100%;margin-top:4px}
@@ -393,11 +393,19 @@ function renderStatus(){
         <div class="tl-bar" style="left:${lp}%;width:${Math.max(parseFloat(wp),4)}%;background:${memberColor(m.id)}33;border:1.5px solid ${memberColor(m.id)}"></div>
         ${mp!==null?`<div class="tl-line" style="left:${mp}%"></div>`:''}
       </div>
-      <div class="tl-time">${ev[m.id].arrive}</div>
+      <div class="tl-time">${ev[m.id].arrive||TIMES[0]}</div>
     </div>`;
   });
   if(meetMin!==null){
-    html+=`<div class="tl-meet-label">▲ ${meetTime}</div>`;
+    const mp=((meetMin-minAll)/range*100).toFixed(1);
+    // 세로 라인(4명 합류 시간) 바로 아래에 라벨 정렬
+    html+=`<div class="tl-row">
+      <div class="tl-name"></div>
+      <div class="tl-wrap" style="background:transparent">
+        <div class="tl-meet-label" style="position:absolute;left:${mp}%;top:18px;transform:translateX(-50%);margin-top:0;white-space:nowrap">▲ ${meetTime}</div>
+      </div>
+      <div class="tl-time"></div>
+    </div>`;
   }
   tl.innerHTML=html;
 }
