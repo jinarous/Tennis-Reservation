@@ -407,7 +407,12 @@ function renderStatus(){
   const range=maxAll-minAll;
   const meetMin=meetTime?timeToMin(meetTime):null;
   let html=`<div class="sec-title">도착 타임라인</div>`;
-  attending.forEach(m=>{
+  const attendingSorted=[...attending].sort((a,b)=>{
+    const am=timeToMin(ev[a.id].arrive||TIMES[0]);
+    const bm=timeToMin(ev[b.id].arrive||TIMES[0]);
+    return am-bm;
+  });
+  attendingSorted.forEach(m=>{
     const arrMin=timeToMin(ev[m.id].arrive||TIMES[0]);
     const lp=((arrMin-minAll)/range*100).toFixed(1);
     const wp=((maxAll-arrMin)/range*100).toFixed(1);
@@ -502,7 +507,12 @@ function renderPanel(){
     const range=maxAll-minAll;
     const meetMin=meetTime?timeToMin(meetTime):null;
     let html=`<div><div class="sec-title" style="margin-bottom:8px">도착 타임라인</div>`;
-    attending.forEach(m=>{
+    const attendingSorted=[...attending].sort((a,b)=>{
+      const am=timeToMin(ev[a.id].arrive||TIMES[0]);
+      const bm=timeToMin(ev[b.id].arrive||TIMES[0]);
+      return am-bm;
+    });
+    attendingSorted.forEach(m=>{
       const arrMin=timeToMin(ev[m.id].arrive||'18:00');
       const lp=((arrMin-minAll)/range*100).toFixed(1);
       const wp=((maxAll-arrMin)/range*100).toFixed(1);
@@ -513,7 +523,7 @@ function renderPanel(){
           <div class="tl-bar" style="left:${lp}%;width:${Math.max(parseFloat(wp),4)}%;background:${memberColor(m.id)}33;border:1.5px solid ${memberColor(m.id)}"></div>
           ${mp!==null?`<div class="tl-line" style="left:${mp}%"></div>`:''}
         </div>
-        <div class="tl-time">${ev[m.id].arrive}</div>
+        <div class="tl-time">${ev[m.id].arrive||TIMES[0]}</div>
       </div>`;
     });
     if(meetMin!==null){
