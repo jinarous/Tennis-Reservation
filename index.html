@@ -29,6 +29,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .day-num.today-n{font-weight:700;color:#185fa5}
 .dots{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px}
 .dot{width:14px;height:14px;border-radius:50%;font-size:7px;color:white;font-weight:700;display:flex;align-items:center;justify-content:center}
+.dot.more{background:#e6e6e6;color:#555;border:1px solid #ddd;font-weight:800}
 .ready-badge{
   font-size:8px;
   background:#639922;
@@ -100,6 +101,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* 타임라인 */
 .tl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:nowrap}
+.tl-row.meet{margin-top:-4px;margin-bottom:0}
+.tl-wrap.meet{background:transparent;height:22px}
+.tl-wrap.meet .tl-meet-label{position:absolute;top:3px;transform:translateX(-50%);margin-top:0;white-space:nowrap}
 .tl-name{font-size:11px;font-weight:600;width:46px;text-align:right;flex-shrink:0}
 .tl-wrap{flex:1;height:16px;background:#f0f0f0;border-radius:8px;position:relative;overflow:visible}
 .tl-bar{height:16px;border-radius:8px;position:absolute}
@@ -333,7 +337,11 @@ function renderCal(){
     cell.onclick=()=>openPanel(curYear,curMonth,d);
     let html=`<div class="day-num${dow===0?' sun':''}${isToday?' today-n':''}">${d}</div>`;
     html+=`<div class="dots">`;
-    attending.slice(0,4).forEach(m=>{html+=`<div class="dot" style="background:${memberColor(m.id)}">${m.name[0]}</div>`;});
+    const maxDots=attending.length>4?3:4;
+    attending.slice(0,maxDots).forEach(m=>{html+=`<div class="dot" style="background:${memberColor(m.id)}">${m.name[0]}</div>`;});
+    if(attending.length>maxDots){
+      html+=`<div class="dot more">+${attending.length-maxDots}</div>`;
+    }
     html+=`</div>`;
     if(meetTime){
       html+=`<div class="ready-badge">예약가능</div>`;
@@ -399,10 +407,10 @@ function renderStatus(){
   if(meetMin!==null){
     const mp=((meetMin-minAll)/range*100).toFixed(1);
     // 세로 라인(4명 합류 시간) 바로 아래에 라벨 정렬
-    html+=`<div class="tl-row">
+    html+=`<div class="tl-row meet">
       <div class="tl-name"></div>
-      <div class="tl-wrap" style="background:transparent">
-        <div class="tl-meet-label" style="position:absolute;left:${mp}%;top:18px;transform:translateX(-50%);margin-top:0;white-space:nowrap">▲ ${meetTime}</div>
+      <div class="tl-wrap meet">
+        <div class="tl-meet-label" style="left:${mp}%">▲ ${meetTime}</div>
       </div>
       <div class="tl-time"></div>
     </div>`;
