@@ -252,8 +252,11 @@ function getMeetTime(key){
   const ev=events[key]||{};
   const attending=members.filter(m=>ev[m.id]&&ev[m.id].attend);
   if(attending.length<4)return null;
-  const maxMin=Math.max(...attending.map(m=>timeToMin(ev[m.id].arrive||'18:00')));
-  return minToTime(maxMin);
+  // "4명이 다 모이는 시간" = 참석자 도착시간 오름차순 기준 4번째 시간
+  const mins=attending
+    .map(m=>timeToMin(ev[m.id].arrive||TIMES[0]))
+    .sort((a,b)=>a-b);
+  return minToTime(mins[3]);
 }
 
 // Firebase 초기화
@@ -410,9 +413,9 @@ function renderPanel(){
   const mb=document.getElementById('meet-box');
   if(meetTime){
     mb.innerHTML=`<div class="meet-card ready">
-      <div class="meet-label">전원 합류 시간</div>
+      <div class="meet-label">4명 합류 시간</div>
       <div class="meet-time-big">${meetTime}</div>
-      <div class="meet-sub">이 시간부터 코트 예약 가능해요 🎾</div>
+      <div class="meet-sub">4명이 모이는 이 시간부터 코트 예약 가능해요 🎾</div>
     </div>`;
   } else {
     mb.innerHTML=`<div class="meet-card not-ready">
@@ -497,7 +500,7 @@ function doReserve(){
   const attending=members.filter(m=>ev[m.id]&&ev[m.id].attend);
   const meetTime=getMeetTime(selDate);
   const names=attending.map(m=>m.name).join(', ');
-  alert(`✅ 예약 명단\n${names}\n\n⏰ 전원 합류: ${meetTime}\n이 시간에 코트 예약 명단에 등록하세요!`);
+  alert(`✅ 예약 명단\n${names}\n\n⏰ 4명 합류: ${meetTime}\n이 시간에 코트 예약 명단에 등록하세요!`);
 }
 
 function openManage(){
